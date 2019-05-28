@@ -1,7 +1,7 @@
 import firebase from "firebase";
 export const initializeFirebase = () => {
   firebase.initializeApp({
-    messagingSenderId: "432001711439"
+    messagingSenderId: "848447013519"
   });
 };
 

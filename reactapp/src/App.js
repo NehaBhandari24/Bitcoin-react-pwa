@@ -2,7 +2,8 @@
 import React, { Component } from "react";
 // Import CSS from App.css
 import "./App.css";
-import CurrencyStatus from "./status/CurrencyStatus";
+import Today from './Today/Today'
+import History from './History/History'
 import { askForPermissionToReceiveNotifications } from "./notifications/firebase";
 
 class App extends Component {
@@ -46,7 +47,8 @@ class App extends Component {
             </h1>
           </div>
           <div className="results--section__inner">
-            <CurrencyStatus token={this.state.token} />
+                <Today />
+                <History />
           </div>
         </section>
       </div>

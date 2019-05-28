@@ -58,6 +58,8 @@ function registerValidSW(swUrl, config) {
   navigator.serviceWorker
     .register(swUrl)
     .then(registration => {
+
+      console.log("registered");
       registration.onupdatefound = () => {
         const installingWorker = registration.installing;
         if (installingWorker == null) {
@@ -129,7 +131,8 @@ function checkValidServiceWorker(swUrl, config) {
 export function unregister() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.ready.then(registration => {
+       console.log('Hooray. Registration successful, scope is:', registration.scope);
       registration.unregister();
-    });
+    })
   }
 }
