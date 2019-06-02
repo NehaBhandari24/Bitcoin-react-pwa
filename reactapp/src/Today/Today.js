@@ -1,115 +1,115 @@
-
 import React, { Component } from 'react';
 import './Today.css'
 import axios from 'axios'
+import { CryptoPrice } from "./CryptoPrice";
+
 class Today extends Component {
-        // Adds a class constructor that assigns the initial state values:
-				// Adds a class constructor that assigns the initial state values:
-			  constructor(props) {
-			    super(props);
-			    this.state = {
-			      btcprice: "",
-			      ltcprice: "",
-			      ethprice: "",
-			      token: props.token
-			    };
-			  }
+	/**
+	 * If you're not using the props to initialize your state, you can
+	 * just define the state like this and remove the constructor
+	 */
+	state = {
+		btcprice: 0, // I guess you can keep it an empty string, I just think its better to give it a default value of 0 since they're numbers
+		ltcprice: 0,
+		ethprice: 0
+	};
 
+  sendPricePusher(prices) {
+    axios
+      .post("https://node-pwa-app.firebaseapp.com/prices/new", {
+        prices: prices,
+        token: this.state.token
+      })
+      .then(() => {
+        this.setState({
+          btcprice: prices.BTC.USD,
+          ethprice: prices.ETH.USD,
+          ltcprice: prices.LTC.USD
+        });
+      })
+      .catch(error => {
+        console.log(error);
+      });
+  }
 
-				componentDidMount () {
-					axios.get('https://min-api.cryptocompare.com/data/pricemulti?fsyms=BTC,ETH,LTC&tsyms=USD')
-	        .then(response => {
-	            this.setState({ btcprice: response.data.BTC.USD });
-	            localStorage.setItem('BTC', response.data.BTC.USD);
+	/**
+	 * ComponentWillMount is deprecated and should never be used
+	 * The only exception is:
+	 * When doing Server Side Rendering, this is the only lifecycle method called
+	 *
+	 * Source: https://facebook.github.io/react/docs/react-component.html
+	 */
+	componentWillMount() { }
 
-	            this.setState({ ethprice: response.data.ETH.USD });
-	            localStorage.setItem('ETH', response.data.ETH.USD);
+	/**
+	 * Let's create utilitary functions to keep our code D.R.Y.
+	 * Btw, in our use case it's perfectly fine to save the entire state here
+	 */
+	saveStateToLocalStorage = () => {
+		localStorage.setItem('today-state', JSON.stringify(this.state));
+	};
 
-	            this.setState({ ltcprice: response.data.LTC.USD });
-	            localStorage.setItem('LTC', response.data.LTC.USD);
-	        })
-	        .catch(error => {
-	            console.log(error)
-	        })
+	restoreStateFromLocalStorage = () => {
+		const state = JSON.parse(localStorage.getItem('today-state'));
+		this.setState(state);
+	};
 
-					if (!navigator.onLine) {
-			        this.setState({ btcprice: localStorage.getItem('BTC') });
-			        this.setState({ ethprice: localStorage.getItem('ETH') });
-			        this.setState({ ltcprice: localStorage.getItem('LTC') });
-    			}
+	componentDidMount() {
+		if (!navigator.onLine) {
+			return this.restoreStateFromLocalStorage();
+		}
 
-						this.priceSubscription = setInterval(() => {
-							axios
-								.get(
-									"https://min-api.cryptocompare.com/data/pricemulti?fsyms=BTC,ETH,LTC&tsyms=USD"
-								)
-								.then(({ data }) => {
-									this.sendPricePusher(data);
-								})
-								.catch(error => {
-									console.log(error);
-								});
-						}, 20000);
+		axios.get('https://min-api.cryptocompare.com/data/pricemulti?fsyms=BTC,ETH,LTC&tsyms=USD')
+			.then(({ data: { BTC, ETH, LTC } }) => { // Since we're never using responseh or data directly might aswell deconstruct it here
+				/**
+				 * Avoid calling setStates multiple times, just do every calls in one go and let react
+				 * handle the batching
+				 */
+				 console.log(BTC);
+				this.setState({
+					btcprice: BTC.USD,
+					ethprice: ETH.USD,
+					ltcprice: LTC.USD
+				}, this.saveStateToLocalStorage); // You can pass a callback function to setState
 
- 			}
-        // This is called when an instance of a component is being created and inserted into the DOM.
-        componentWillMount () {
-            axios.get('https://min-api.cryptocompare.com/data/pricemulti?fsyms=BTC,ETH,LTC&tsyms=USD')
-                .then(response => {
-                    // We set the latest prices in the state to the prices gotten from Cryptocurrency.
-                    this.setState({ btcprice: response.data.BTC.USD });
-                    this.setState({ ethprice: response.data.ETH.USD });
-                    this.setState({ ltcprice: response.data.LTC.USD });
-                })
-                // Catch any error here
-                .catch(error => {
-                    console.log(error)
-                })
-        }
+			})
+			.catch(console.error);
+		// Let's store this interval in our class so that we can remove it in componentWillUnmount
+		this.cryptoSubscription = setInterval(() => {
+			axios.get('https://min-api.cryptocompare.com/data/pricemulti?fsyms=BTC,ETH,LTC&tsyms=USD')
+				.then(({ data }) => { // This is a style question, I prefed doing it this way, to each its own
+					this.sendPricePusher(data)
+				})
+				.catch(console.error)
+		}, 10000);
+		// this.prices.bind('prices', ({ prices: { BTC, ETH, LTC } }) => {
+		// 	this.setState({
+		// 		btcprice: BTC.USD,
+		// 		ethprice: ETH.USD,
+		// 		ltcprice: LTC.USD
+		// 	}, this.saveStateToLocalStorage);
+		// }, this);
+	}
 
-				sendPricePusher(prices) {
-					axios
-						.post("https://node-pwa-app.firebaseapp.com/prices/new", {
-							prices: prices,
-							token: this.state.token
-						})
-						.then(() => {
-							this.setState({
-								btcprice: prices.BTC.USD,
-								ethprice: prices.ETH.USD,
-								ltcprice: prices.LTC.USD
-							});
-						})
-						.catch(error => {
-							console.log(error);
-						});
-				}
+	componentWillUnmount() {
+		clearInterval(this.cryptoSubscription);
+	}
 
-				componentWillUnmount() {
-					clearInterval(this.priceSubscription);
-				}
-        // The render method contains the JSX code which will be compiled to HTML.
-        render() {
-            return (
-                <div className="today--section container">
-                    <h2>Current Price</h2>
-                    <div className="columns today--section__box">
-                        <div className="column btc--section">
-                            <h5>${this.state.btcprice}</h5>
-                            <p>1 BTC</p>
-                        </div>
-                        <div className="column eth--section">
-                            <h5>${this.state.ethprice}</h5>
-                            <p>1 ETH</p>
-                        </div>
-                        <div className="column ltc--section">
-                            <h5>${this.state.ltcprice}</h5>
-                            <p>1 LTC</p>
-                        </div>
-                    </div>
-                </div>
-            )
-        }
-    }
+	render() {
+		// Let's extract everything uptop to keep our render method cleaner ;)
+		const { ethprice, btcprice, ltcprice } = this.state;
+		return (
+			<div className="today--section container">
+				<h2>Current Price</h2>
+				<div className="columns today--section__box">
+					{/** Creating components for things that repeat themselves is also pretty good**/}
+					<CryptoPrice currency="btc" price={btcprice} />
+					<CryptoPrice currency="eth" price={ethprice} />
+					<CryptoPrice currency="ltc" price={ltcprice} />
+				</div>
+			</div>
+		)
+	}
+}
 
-    export default Today;
+export default Today;
